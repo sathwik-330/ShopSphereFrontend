@@ -260,152 +260,245 @@
 
 import React, { useContext, useState, useEffect } from "react";
 import AppContext from "../Context/Context";
-import axios from "axios";
+import axios from "../axios";
 import CheckoutPopup from "./CheckoutPopup";
-import { Button } from 'react-bootstrap';
+import { Button } from "react-bootstrap";
 
 const Cart = () => {
-  const { cart, removeFromCart , clearCart } = useContext(AppContext);
+  const { cart, removeFromCart, clearCart } = useContext(AppContext);
+
   const [cartItems, setCartItems] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [cartImage, setCartImage] = useState([]);
   const [showModal, setShowModal] = useState(false);
 
+  // Fetch cart items and their images
   useEffect(() => {
-    const fetchImagesAndUpdateCart = async () => {
-      console.log("Cart", cart);
-      try {
-        const response = await axios.get("http://localhost:8080/api/products");
-        const backendProductIds = response.data.map((product) => product.id);
+    const fetchCartItems = async () => {
+      if (cart.length === 0) {
+        setCartItems([]);
+        return;
+      }
 
-        const updatedCartItems = cart.filter((item) => backendProductIds.includes(item.id));
+      try {
+       const response = await axios.get("/products");
+
+        const backendProducts = response.data;
+
+        const updatedCartItems = cart
+          .filter((cartItem) =>
+            backendProducts.some(
+              (product) => product.id === cartItem.id
+            )
+          )
+          .map((cartItem) => {
+            const backendProduct = backendProducts.find(
+              (product) => product.id === cartItem.id
+            );
+
+            return {
+              ...backendProduct,
+              quantity: cartItem.quantity,
+            };
+          });
+
         const cartItemsWithImages = await Promise.all(
           updatedCartItems.map(async (item) => {
             try {
-              const response = await axios.get(
-                `http://localhost:8080/api/product/${item.id}/image`,
-                { responseType: "blob" }
+              const imageResponse = await axios.get(
+  `/product/${item.id}/image`,
+  {
+    responseType: "blob",
+  }
+);
+
+              const imageUrl = URL.createObjectURL(
+                imageResponse.data
               );
-              const imageFile = await converUrlToFile(response.data, response.data.imageName);
-              setCartImage(imageFile)
-              const imageUrl = URL.createObjectURL(response.data);
-              return { ...item, imageUrl };
+
+              return {
+                ...item,
+                imageUrl,
+              };
             } catch (error) {
-              console.error("Error fetching image:", error);
-              return { ...item, imageUrl: "placeholder-image-url" };
+              console.error(
+                "Error fetching image:",
+                error
+              );
+
+              return {
+                ...item,
+                imageUrl: "",
+              };
             }
           })
         );
-        console.log("cart",cart)
+
         setCartItems(cartItemsWithImages);
       } catch (error) {
-        console.error("Error fetching product data:", error);
+        console.error(
+          "Error fetching product data:",
+          error
+        );
       }
     };
 
-    if (cart.length) {
-      fetchImagesAndUpdateCart();
-    }
+    fetchCartItems();
   }, [cart]);
 
+  // Calculate total price
   useEffect(() => {
     const total = cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
+      (acc, item) =>
+        acc + Number(item.price) * item.quantity,
       0
     );
+
     setTotalPrice(total);
   }, [cartItems]);
 
-  const converUrlToFile = async (blobData, fileName) => {
-    const file = new File([blobData], fileName, { type: blobData.type });
-    return file;
-  }
-
+  // Increase quantity
   const handleIncreaseQuantity = (itemId) => {
     const newCartItems = cartItems.map((item) => {
       if (item.id === itemId) {
         if (item.quantity < item.stockQuantity) {
-          return { ...item, quantity: item.quantity + 1 };
+          return {
+            ...item,
+            quantity: item.quantity + 1,
+          };
         } else {
           alert("Cannot add more than available stock");
         }
       }
+
       return item;
     });
+
     setCartItems(newCartItems);
   };
-  
 
+  // Decrease quantity
   const handleDecreaseQuantity = (itemId) => {
     const newCartItems = cartItems.map((item) =>
       item.id === itemId
-        ? { ...item, quantity: Math.max(item.quantity - 1, 1) }
+        ? {
+            ...item,
+            quantity: Math.max(
+              item.quantity - 1,
+              1
+            ),
+          }
         : item
     );
+
     setCartItems(newCartItems);
   };
 
+  // Remove product
   const handleRemoveFromCart = (itemId) => {
     removeFromCart(itemId);
-    const newCartItems = cartItems.filter((item) => item.id !== itemId);
+
+    const newCartItems = cartItems.filter(
+      (item) => item.id !== itemId
+    );
+
     setCartItems(newCartItems);
   };
 
+  // Checkout
   const handleCheckout = async () => {
     try {
       for (const item of cartItems) {
-        const { imageUrl, imageName, imageData, imageType, quantity, ...rest } = item;
-        const updatedStockQuantity = item.stockQuantity - item.quantity;
-  
-        const updatedProductData = { ...rest, stockQuantity: updatedStockQuantity };
-        console.log("updated product data", updatedProductData)
-  
+        const updatedStockQuantity =
+          item.stockQuantity - item.quantity;
+
+       const updatedProductData = {
+  id: item.id,
+  name: item.name,
+  desc: item.desc,
+  brand: item.brand,
+  price: item.price,
+  category: item.category,
+  releaseDate: item.releaseDate,
+  available: item.available,
+  stockQuantity: updatedStockQuantity,
+  imageName: item.imageName,
+  imageType: item.imageType,
+};
         const cartProduct = new FormData();
-        cartProduct.append("imageFile", cartImage);
+
+        // Do not send image data again.
+        // Send only product JSON.
         cartProduct.append(
           "product",
-          new Blob([JSON.stringify(updatedProductData)], { type: "application/json" })
+          new Blob(
+            [JSON.stringify(updatedProductData)],
+            {
+              type: "application/json",
+            }
+          )
         );
-  
-        await axios
-          .put(`http://localhost:8080/api/product/${item.id}`, cartProduct, {
+
+        await axios.put(
+  `/product/${item.id}`,
+  cartProduct,
+          {
             headers: {
-              "Content-Type": "multipart/form-data",
+              "Content-Type":
+                "multipart/form-data",
             },
-          })
-          .then((response) => {
-            console.log("Product updated successfully:", (cartProduct));
-          })
-          .catch((error) => {
-            console.error("Error updating product:", error);
-          });
+          }
+        );
       }
+
+      alert("Order placed successfully!");
+
       clearCart();
       setCartItems([]);
       setShowModal(false);
     } catch (error) {
-      console.log("error during checkout", error);
+      console.error(
+        "Error during checkout:",
+        error
+      );
+
+      alert("Checkout failed");
     }
   };
 
   return (
     <div className="cart-container">
       <div className="shopping-cart">
-        <div className="title">Shopping Bag</div>
+
+        <div className="title">
+          Shopping Bag
+        </div>
+
         {cartItems.length === 0 ? (
-          <div className="empty" style={{ textAlign: "left", padding: "2rem" }}>
+          <div
+            className="empty"
+            style={{
+              textAlign: "left",
+              padding: "2rem",
+            }}
+          >
             <h4>Your cart is empty</h4>
           </div>
         ) : (
           <>
             {cartItems.map((item) => (
-              <li key={item.id} className="cart-item">
+              <li
+                key={item.id}
+                className="cart-item"
+              >
                 <div
                   className="item"
-                  style={{ display: "flex", alignContent: "center" }}
-                  key={item.id}
+                  style={{
+                    display: "flex",
+                    alignContent: "center",
+                  }}
                 >
-                 
+
+                  {/* Image */}
                   <div>
                     <img
                       src={item.imageUrl}
@@ -413,68 +506,107 @@ const Cart = () => {
                       className="cart-item-image"
                     />
                   </div>
+
+                  {/* Product details */}
                   <div className="description">
                     <span>{item.brand}</span>
                     <span>{item.name}</span>
                   </div>
 
+                  {/* Quantity */}
                   <div className="quantity">
+
                     <button
                       className="plus-btn"
                       type="button"
-                      name="button"
-                      onClick={() => handleIncreaseQuantity(item.id)}
+                      onClick={() =>
+                        handleIncreaseQuantity(
+                          item.id
+                        )
+                      }
                     >
                       <i className="bi bi-plus-square-fill"></i>
                     </button>
+
                     <input
                       type="button"
-                      name="name"
                       value={item.quantity}
                       readOnly
                     />
+
                     <button
                       className="minus-btn"
                       type="button"
-                      name="button"
-                      onClick={() => handleDecreaseQuantity(item.id)}
+                      onClick={() =>
+                        handleDecreaseQuantity(
+                          item.id
+                        )
+                      }
                     >
                       <i className="bi bi-dash-square-fill"></i>
                     </button>
+
                   </div>
 
-                  <div className="total-price " style={{ textAlign: "center" }}>
-                    ${item.price * item.quantity}
+                  {/* Price */}
+                  <div
+                    className="total-price"
+                    style={{
+                      textAlign: "center",
+                    }}
+                  >
+                    ₹
+                    {Number(item.price) *
+                      item.quantity}
                   </div>
+
+                  {/* Remove */}
                   <button
                     className="remove-btn"
-                    onClick={() => handleRemoveFromCart(item.id)}
+                    onClick={() =>
+                      handleRemoveFromCart(
+                        item.id
+                      )
+                    }
                   >
                     <i className="bi bi-trash3-fill"></i>
                   </button>
+
                 </div>
               </li>
             ))}
-            <div className="total">Total: ${totalPrice}</div>
+
+            {/* Total */}
+            <div className="total">
+              Total: ₹{totalPrice}
+            </div>
+
+            {/* Checkout */}
             <Button
               className="btn btn-primary"
-              style={{ width: "100%" }}
-              onClick={() => setShowModal(true)}
+              style={{
+                width: "100%",
+              }}
+              onClick={() =>
+                setShowModal(true)
+              }
             >
               Checkout
             </Button>
           </>
         )}
       </div>
+
       <CheckoutPopup
         show={showModal}
-        handleClose={() => setShowModal(false)}
+        handleClose={() =>
+          setShowModal(false)
+        }
         cartItems={cartItems}
         totalPrice={totalPrice}
         handleCheckout={handleCheckout}
       />
     </div>
-
   );
 };
 

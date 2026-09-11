@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import Home from "./Home"
-import axios from "axios";
+import Home from "./Home";
+import axios from "../axios";
 // import { json } from "react-router-dom";
 // import { BiSunFill, BiMoon } from "react-icons/bi";
 
@@ -15,14 +15,14 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [noResults, setNoResults] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
-  const [showSearchResults,setShowSearchResults] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false);
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async (value) => {
     try {
-      const response = await axios.get("http://localhost:8080/api/products");
+      const response = await axios.get("/products");
       setSearchResults(response.data);
       console.log(response.data);
     } catch (error) {
@@ -33,17 +33,17 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
   const handleChange = async (value) => {
     setInput(value);
     if (value.length >= 1) {
-      setShowSearchResults(true)
-    try {
-      const response = await axios.get(
-        `http://localhost:8080/api/products/search?keyword=${value}`
-      );
-      setSearchResults(response.data);
-      setNoResults(response.data.length === 0);
-      console.log(response.data);
-    } catch (error) {
-      console.error("Error searching:", error);
-    }
+      setShowSearchResults(true);
+      try {
+       const response = await axios.get(
+  `/products/search?keyword=${encodeURIComponent(value)}`
+);
+        setSearchResults(response.data);
+        setNoResults(response.data.length === 0);
+        console.log(response.data);
+      } catch (error) {
+        console.error("Error searching:", error);
+      }
     } else {
       setShowSearchResults(false);
       setSearchResults([]);
@@ -51,7 +51,6 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
     }
   };
 
-  
   // const handleChange = async (value) => {
   //   setInput(value);
   //   if (value.length >= 1) {
@@ -107,8 +106,8 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
       <header>
         <nav className="navbar navbar-expand-lg fixed-top">
           <div className="container-fluid">
-            <a className="navbar-brand" href="https://telusko.com/">
-              Telusko
+            <a className="navbar-brand" href="https://www.linkedin.com/in/sathwik-k-693019336/">
+              ShopSphere
             </a>
             <button
               className="navbar-toggler"
@@ -193,21 +192,22 @@ const Navbar = ({ onSelectCategory, onSearch }) => {
                 />
                 {showSearchResults && (
                   <ul className="list-group">
-                    {searchResults.length > 0 ? (  
-                        searchResults.map((result) => (
+                    {searchResults.length > 0
+                      ? searchResults.map((result) => (
                           <li key={result.id} className="list-group-item">
-                            <a href={`/product/${result.id}`} className="search-result-link">
-                            <span>{result.name}</span>
+                            <a
+                              href={`/product/${result.id}`}
+                              className="search-result-link"
+                            >
+                              <span>{result.name}</span>
                             </a>
                           </li>
                         ))
-                    ) : (
-                      noResults && (
-                        <p className="no-results-message">
-                          No Prouduct with such Name
-                        </p>
-                      )
-                    )}
+                      : noResults && (
+                          <p className="no-results-message">
+                            No Prouduct with such Name
+                          </p>
+                        )}
                   </ul>
                 )}
                 {/* <button

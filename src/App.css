@@ -509,49 +509,6 @@ padding-top: 100px;
   margin-right: 60px;
 }
 
-.delete-btn,
-.like-btn {
-  display: inline-block;
-  Cursor: pointer;
-}
-
-.delete-btn {
-  width: 18px;
-  height: 17px;
-  background: url(&quot;delete-icn.svg&amp;quot;) no-repeat center;
-  /* color: var(--body_color); */
-}
-
-.like-btn {
-  position: absolute;
-  top: 9px;
-  left: 15px;
-  background: url("twitter-heart.png");
-  width: 60px;
-  height: 60px;
-  background-size: 2900%;
-  background-repeat: no-repeat;
-}
-
-.is-active {
-  animation-name: animate;
-  animation-duration: 0.8s;
-  animation-iteration-count: 1;
-  animation-timing-function: steps(28);
-  animation-fill-mode: forwards;
-}
-
-@keyframes animate {
-  0% {
-    background-position: left;
-  }
-  50% {
-    background-position: right;
-  }
-  100% {
-    background-position: right;
-  }
-}
 
 .image img {
   margin-right: 80px;

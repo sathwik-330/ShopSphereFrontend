@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import axios from "../axios";
 import AppContext from "../Context/Context";
-import unplugged from "../assets/unplugged.png"
+import unplugged from "../assets/unplugged.png";
 
 const Home = ({ selectedCategory }) => {
   const { data, isError, addToCart, refreshData } = useContext(AppContext);
+
   const [products, setProducts] = useState([]);
   const [isDataFetched, setIsDataFetched] = useState(false);
 
@@ -22,40 +23,69 @@ const Home = ({ selectedCategory }) => {
         const updatedProducts = await Promise.all(
           data.map(async (product) => {
             try {
-              const response = await axios.get(
-                `http://localhost:8080/api/product/${product.id}/image`,
-                { responseType: "blob" }
-              );
+             const response = await axios.get(
+  `/product/${product.id}/image`,
+  {
+    responseType: "blob",
+  }
+);
+
               const imageUrl = URL.createObjectURL(response.data);
-              return { ...product, imageUrl };
+
+              return {
+                ...product,
+                imageUrl,
+              };
             } catch (error) {
               console.error(
                 "Error fetching image for product ID:",
                 product.id,
                 error
               );
-              return { ...product, imageUrl: "placeholder-image-url" };
+
+              return {
+                ...product,
+                imageUrl: "placeholder-image-url",
+              };
             }
           })
         );
+
         setProducts(updatedProducts);
       };
 
       fetchImagesAndUpdateProducts();
+    } else {
+      setProducts([]);
     }
   }, [data]);
 
   const filteredProducts = selectedCategory
-    ? products.filter((product) => product.category === selectedCategory)
+    ? products.filter(
+        (product) => product.category === selectedCategory
+      )
     : products;
 
   if (isError) {
     return (
-      <h2 className="text-center" style={{ padding: "18rem" }}>
-      <img src={unplugged} alt="Error" style={{ width: '100px', height: '100px' }}/>
+      <h2
+        className="text-center"
+        style={{
+          padding: "18rem",
+        }}
+      >
+        <img
+          src={unplugged}
+          alt="Error"
+          style={{
+            width: "100px",
+            height: "100px",
+          }}
+        />
       </h2>
     );
   }
+
   return (
     <>
       <div
@@ -63,7 +93,8 @@ const Home = ({ selectedCategory }) => {
         style={{
           marginTop: "64px",
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(250px, 1fr))",
           gap: "20px",
           padding: "20px",
         }}
@@ -81,47 +112,58 @@ const Home = ({ selectedCategory }) => {
           </h2>
         ) : (
           filteredProducts.map((product) => {
-            const { id, brand, name, price, productAvailable, imageUrl } =
-              product;
-            const cardStyle = {
-              width: "18rem",
-              height: "12rem",
-              boxShadow: "rgba(0, 0, 0, 0.24) 0px 2px 3px",
-              backgroundColor: productAvailable ? "#fff" : "#ccc",
-            };
+            // IMPORTANT:
+            // Backend Product.java has "available"
+            // So we must use "available" here.
+            const {
+              id,
+              brand,
+              name,
+              price,
+              available,
+              imageUrl,
+            } = product;
+
             return (
               <div
                 className="card mb-3"
                 style={{
                   width: "250px",
                   height: "360px",
-                  boxShadow: "0 4px 8px rgba(0,0,0,0.1)",
+                  boxShadow:
+                    "0 4px 8px rgba(0,0,0,0.1)",
                   borderRadius: "10px",
-                  overflow: "hidden", 
-                  backgroundColor: productAvailable ? "#fff" : "#ccc",
+                  overflow: "hidden",
+                  backgroundColor: available
+                    ? "#fff"
+                    : "#ccc",
                   display: "flex",
                   flexDirection: "column",
-                  justifyContent:'flex-start',
-                  alignItems:'stretch'
+                  justifyContent: "flex-start",
+                  alignItems: "stretch",
                 }}
                 key={id}
               >
                 <Link
                   to={`/product/${id}`}
-                  style={{ textDecoration: "none", color: "inherit" }}
+                  style={{
+                    textDecoration: "none",
+                    color: "inherit",
+                  }}
                 >
                   <img
                     src={imageUrl}
                     alt={name}
                     style={{
                       width: "100%",
-                      height: "150px", 
-                      objectFit: "cover",  
+                      height: "150px",
+                      objectFit: "cover",
                       padding: "5px",
                       margin: "0",
-                      borderRadius: "10px 10px 10px 10px", 
+                      borderRadius: "10px",
                     }}
                   />
+
                   <div
                     className="card-body"
                     style={{
@@ -135,38 +177,61 @@ const Home = ({ selectedCategory }) => {
                     <div>
                       <h5
                         className="card-title"
-                        style={{ margin: "0 0 10px 0", fontSize: "1.2rem" }}
+                        style={{
+                          margin: "0 0 10px 0",
+                          fontSize: "1.2rem",
+                        }}
                       >
                         {name.toUpperCase()}
                       </h5>
+
                       <i
                         className="card-brand"
-                        style={{ fontStyle: "italic", fontSize: "0.8rem" }}
+                        style={{
+                          fontStyle: "italic",
+                          fontSize: "0.8rem",
+                        }}
                       >
                         {"~ " + brand}
                       </i>
                     </div>
-                    <hr className="hr-line" style={{ margin: "10px 0" }} />
+
+                    <hr
+                      className="hr-line"
+                      style={{
+                        margin: "10px 0",
+                      }}
+                    />
+
                     <div className="home-cart-price">
                       <h5
                         className="card-text"
-                        style={{ fontWeight: "600", fontSize: "1.1rem",marginBottom:'5px' }}
+                        style={{
+                          fontWeight: "600",
+                          fontSize: "1.1rem",
+                          marginBottom: "5px",
+                        }}
                       >
-                        <i class="bi bi-currency-rupee"></i>
+                        <i className="bi bi-currency-rupee"></i>
                         {price}
                       </h5>
                     </div>
+
                     <button
                       className="btn-hover color-9"
-                      style={{margin:'10px 25px 0px '  }}
+                      style={{
+                        margin: "10px 25px 0px",
+                      }}
                       onClick={(e) => {
                         e.preventDefault();
                         addToCart(product);
                       }}
-                      disabled={!productAvailable}
+                      disabled={!available}
                     >
-                      {productAvailable ? "Add to Cart" : "Out of Stock"}
-                    </button> 
+                      {available
+                        ? "Add to Cart"
+                        : "Out of Stock"}
+                    </button>
                   </div>
                 </Link>
               </div>
