@@ -49,7 +49,11 @@ const AddProduct = () => {
         console.error("Status:", error.response?.status);
         console.error("Response:", error.response?.data);
 
-        alert("Error adding product");
+        alert( `Error adding product: ${
+      error.response?.data?.message ||
+      error.response?.data ||
+      error.message
+    }`);
       });
   };
 
